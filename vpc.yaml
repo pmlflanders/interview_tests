@@ -1,0 +1,449 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack to manage vpc-prd-us-east-1
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+      - W3010
+      regions:
+      - us-east-1
+      - us-east-2
+Outputs:
+  AllSubnets:
+    Description: List of *all* subnets
+    Export:
+      Name: VpcUsEast1AllSubnets
+    Value: SubnetPrvA,SubnetPrvB,SubnetPubA,SubnetPubB
+  DefaultSecurityGroupId:
+    Description: DefaultSecurityGroup Id
+    Value:
+      Fn::GetAtt:
+      - VPC
+      - DefaultSecurityGroup
+  PrivateSubnets:
+    Description: List of private subnets
+    Export:
+      Name: VpcUsEast1PrivateSubnets
+    Value: SubnetPrvA,SubnetPrvB
+  PublicSubnets:
+    Description: List of public subnets
+    Export:
+      Name: VpcUsEast1PublicSubnets
+    Value: SubnetPubA,SubnetPubB
+  SecurityGroupICMP:
+    Description: Security Group ID for SecurityGroupICMP
+    Export:
+      Name: VpcUsEast1SecurityGroupICMP
+    Value:
+      Ref: SecurityGroupICMP
+  SecurityGroupRoute53ResolverEndpoint:
+    Description: Security Group ID for SecurityGroupRoute53ResolverEndpoint
+    Export:
+      Name: VpcUsEast1SecurityGroupRoute53ResolverEndpoint
+    Value:
+      Ref: SecurityGroupRoute53ResolverEndpoint
+  SecurityGroupSSH:
+    Description: Security Group ID for SecurityGroupSSH
+    Export:
+      Name: VpcUsEast1SecurityGroupSSH
+    Value:
+      Ref: SecurityGroupSSH
+  SecurityGroupSecretsManagerEndpoint:
+    Description: Security Group ID for SecurityGroupSecretsManagerEndpoint
+    Export:
+      Name: VpcUsEast1SecurityGroupSecretsManagerEndpoint
+    Value:
+      Ref: SecurityGroupSecretsManagerEndpoint
+  SubnetPrvA:
+    Description: Subnet ID for SubnetPrvA
+    Export:
+      Name: VpcUsEast1SubnetPrvA
+    Value:
+      Ref: SubnetPrvA
+  SubnetPrvB:
+    Description: Subnet ID for SubnetPrvB
+    Export:
+      Name: VpcUsEast1SubnetPrvB
+    Value:
+      Ref: SubnetPrvB
+  SubnetPubA:
+    Description: Subnet ID for SubnetPubA
+    Export:
+      Name: VpcUsEast1SubnetPubA
+    Value:
+      Ref: SubnetPubA
+  SubnetPubB:
+    Description: Subnet ID for SubnetPubB
+    Export:
+      Name: VpcUsEast1SubnetPubB
+    Value:
+      Ref: SubnetPubB
+  VpcId:
+    Description: VPC ID
+    Export:
+      Name: VpcUsEast1
+    Value:
+      Ref: VPC
+Parameters:
+  VpcCidr:
+    AllowedPattern: ^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})$
+    Default: 10.121.0.0/16
+    Type: String
+Resources:
+  DhcpOptions:
+    Properties:
+      DomainName: ec2.internal
+      DomainNameServers:
+      - AmazonProvidedDNS
+      Tags:
+      - Key: Name
+        Value: DhcpVpcUsEast1
+    Type: AWS::EC2::DHCPOptions
+  DhcpOptionsAssociation:
+    Properties:
+      DhcpOptionsId:
+        Ref: DhcpOptions
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+  GatewayAttachmentToInternet:
+    Properties:
+      InternetGatewayId:
+        Ref: InternetGateway
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::VPCGatewayAttachment
+  InternetGateway:
+    Properties:
+      Tags:
+      - Key: Name
+        Value: igw-VpcUsEast1
+    Type: AWS::EC2::InternetGateway
+  RouteTablePrv01:
+    Properties:
+      Tags:
+      - Key: Name
+        Value: RouteTablePrv01
+      - Key: network_scope
+        Value: private
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::RouteTable
+  RouteTablePub01:
+    Properties:
+      Tags:
+      - Key: Name
+        Value: RouteTablePub01
+      - Key: network_scope
+        Value: public
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::RouteTable
+  RouteTablePub01DefaultPub:
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+      RouteTableId:
+        Ref: RouteTablePub01
+    Type: AWS::EC2::Route
+  SSMParameterSecurityGroupICMPArn:
+    Properties:
+      Description: Allow ICMP traffic
+      Name: /Infra/Vpc/VpcUsEast1/SecurityGroupICMP
+      Tier: Standard
+      Type: String
+      Value:
+        Ref: SecurityGroupICMP
+    Type: AWS::SSM::Parameter
+  SSMParameterSecurityGroupRoute53ResolverEndpointArn:
+    Properties:
+      Description: Allow traffic to/from Route53 Resolver Endpoint
+      Name: /Infra/Vpc/VpcUsEast1/SecurityGroupRoute53ResolverEndpoint
+      Tier: Standard
+      Type: String
+      Value:
+        Ref: SecurityGroupRoute53ResolverEndpoint
+    Type: AWS::SSM::Parameter
+  SSMParameterSecurityGroupSSHArn:
+    Properties:
+      Description: Allow SSH traffic
+      Name: /Infra/Vpc/VpcUsEast1/SecurityGroupSSH
+      Tier: Standard
+      Type: String
+      Value:
+        Ref: SecurityGroupSSH
+    Type: AWS::SSM::Parameter
+  SSMParameterSecurityGroupSecretsManagerEndpointArn:
+    Properties:
+      Description: Allow traffic to/from Secrets Manager endpoint
+      Name: /Infra/Vpc/VpcUsEast1/SecurityGroupSecretsManagerEndpoint
+      Tier: Standard
+      Type: String
+      Value:
+        Ref: SecurityGroupSecretsManagerEndpoint
+    Type: AWS::SSM::Parameter
+  SSMParameterSubnetsNamesList:
+    Properties:
+      Description: List of *all* subnets
+      Name: /Infra/Vpc/VpcUsEast1/SubnetsNamesList
+      Tier: Standard
+      Type: StringList
+      Value: SubnetPrvA,SubnetPrvB,SubnetPubA,SubnetPubB
+    Type: AWS::SSM::Parameter
+  SSMParameterSubnetsPrivateId:
+    Properties:
+      Description: List of private subnets
+      Name: /Infra/Vpc/VpcUsEast1/SubnetsPrivateIds
+      Tier: Standard
+      Type: StringList
+      Value:
+        Fn::Join:
+        - ','
+        - - Ref: SubnetPrvA
+          - Ref: SubnetPrvB
+    Type: AWS::SSM::Parameter
+  SSMParameterSubnetsPublicId:
+    Properties:
+      Description: List of public subnets
+      Name: /Infra/Vpc/VpcUsEast1/SubnetsPublicIds
+      Tier: Standard
+      Type: StringList
+      Value:
+        Fn::Join:
+        - ','
+        - - Ref: SubnetPubA
+          - Ref: SubnetPubB
+    Type: AWS::SSM::Parameter
+  SSMParameterVpcId:
+    Properties:
+      Description: The VPC ID
+      Name: /Infra/Vpc/VpcUsEast1/VpcId
+      Tier: Standard
+      Type: String
+      Value:
+        Ref: VPC
+    Type: AWS::SSM::Parameter
+  SSMParameterVpcName:
+    Properties:
+      Description: The primary VPC Name for this account
+      Name: /Infra/Vpc/VpcUsEast1/VpcName
+      Tier: Standard
+      Type: String
+      Value: VpcUsEast1
+    Type: AWS::SSM::Parameter
+  SecurityGroupICMP:
+    Properties:
+      GroupDescription: Allow ICMP traffic
+      GroupName: SecurityGroupICMP
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        Description: Allow all egress traffic
+        FromPort: -1
+        IpProtocol: icmp
+        ToPort: -1
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        Description: Allow ICMP from 0.0.0.0/0
+        FromPort: -1
+        IpProtocol: icmp
+        ToPort: -1
+      Tags:
+      - Key: StackName
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value: SecurityGroupICMP
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::SecurityGroup
+  SecurityGroupRoute53ResolverEndpoint:
+    Properties:
+      GroupDescription: Allow traffic to/from Route53 Resolver Endpoint
+      GroupName: SecurityGroupRoute53ResolverEndpoint
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        Description: Allow all egress traffic
+        FromPort: 0
+        IpProtocol: '-1'
+        ToPort: 0
+      SecurityGroupIngress:
+      - CidrIp: 0.0.0.0/0
+        Description: Allow DNS TCP from 0.0.0.0/0
+        FromPort: 53
+        IpProtocol: tcp
+        ToPort: 53
+      - CidrIp: 0.0.0.0/0
+        Description: Allow DNS UDP from 0.0.0.0/0
+        FromPort: 53
+        IpProtocol: udp
+        ToPort: 53
+      Tags:
+      - Key: StackName
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value: SecurityGroupRoute53ResolverEndpoint
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::SecurityGroup
+  SecurityGroupSSH:
+    Properties:
+      GroupDescription: Allow SSH traffic
+      GroupName: SecurityGroupSSH
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        Description: Allow all egress traffic
+        FromPort: 0
+        IpProtocol: '-1'
+        ToPort: 0
+      SecurityGroupIngress:
+      - CidrIp: 10.20.0.0/14
+        Description: Allow SSH from 10.20.0.0/14
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      - CidrIp: 10.30.0.0/16
+        Description: Allow SSH from 10.30.0.0/16
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      - CidrIp: 172.16.0.0/16
+        Description: Allow SSH from 172.16.0.0/16
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      - CidrIp: 172.23.0.0/16
+        Description: Allow SSH from 172.23.0.0/16
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      Tags:
+      - Key: StackName
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value: SecurityGroupSSH
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::SecurityGroup
+  SecurityGroupSecretsManagerEndpoint:
+    Properties:
+      GroupDescription: Allow traffic to/from Secrets Manager endpoint
+      GroupName: SecurityGroupSecretsManagerEndpoint
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        Description: Allow all egress traffic
+        FromPort: 0
+        IpProtocol: '-1'
+        ToPort: 0
+      SecurityGroupIngress:
+      - CidrIp: 10.121.0.0/23
+        Description: Allow access to Secrets Manager
+        FromPort: 443
+        IpProtocol: tcp
+        ToPort: 443
+      Tags:
+      - Key: StackName
+        Value:
+          Ref: AWS::StackName
+      - Key: Name
+        Value: SecurityGroupSecretsManagerEndpoint
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::SecurityGroup
+  SubnetPrvA:
+    Properties:
+      AvailabilityZone:
+        Fn::Sub: ${AWS::Region}a
+      CidrBlock: 10.121.1.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: network_scope
+        Value: private
+      - Key: Name
+        Value: SubnetPrvA
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::Subnet
+  SubnetPrvARouteTablebAssociation:
+    Properties:
+      RouteTableId:
+        Ref: RouteTablePrv01
+      SubnetId:
+        Ref: SubnetPrvA
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  SubnetPrvB:
+    Properties:
+      AvailabilityZone:
+        Fn::Sub: ${AWS::Region}b
+      CidrBlock: 10.12.2.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: network_scope
+        Value: private
+      - Key: Name
+        Value: SubnetPrvB
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::Subnet
+  SubnetPrvBRouteTablebAssociation:
+    Properties:
+      RouteTableId:
+        Ref: RouteTablePrv01
+      SubnetId:
+        Ref: SubnetPrvB
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  SubnetPubA:
+    Properties:
+      AvailabilityZone:
+        Fn::Sub: ${AWS::Region}a
+      CidrBlock: 10.12.251.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: network_scope
+        Value: public
+      - Key: Name
+        Value: SubnetPubA
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::Subnet
+  SubnetPubARouteTablebAssociation:
+    Properties:
+      RouteTableId:
+        Ref: RouteTablePub01
+      SubnetId:
+        Ref: SubnetPubA
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  SubnetPubB:
+    Properties:
+      AvailabilityZone:
+        Fn::Sub: ${AWS::Region}b
+      CidrBlock: 10.12.252.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: network_scope
+        Value: public
+      - Key: Name
+        Value: SubnetPubB
+      VpcId:
+        Ref: VPC
+    Type: AWS::EC2::Subnet
+  SubnetPubBRouteTablebAssociation:
+    Properties:
+      RouteTableId:
+        Ref: RouteTablePub01
+      SubnetId:
+        Ref: SubnetPubB
+    Type: AWS::EC2::SubnetRouteTableAssociation
+  VPC:
+    Properties:
+      CidrBlock:
+        Ref: VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: VpcUsEast1
+    Type: AWS::EC2::VPC

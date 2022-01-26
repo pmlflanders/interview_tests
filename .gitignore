@@ -1,0 +1,9 @@
+# Ignore some Ansible files
+*.retry
+
+# Ignore some Python junk
+venv
+.venv
+.env
+__pycache__/
+

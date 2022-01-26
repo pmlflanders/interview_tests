@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack to manage IAM resources
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+      - W3010
+      regions:
+      - us-east-1
+      - us-east-2
+Resources:
+  InstanceProfileEc2RoleGeneral:
+    Properties:
+      InstanceProfileName: Ec2RoleGeneral
+      Path: /
+      Roles:
+      - Ref: Ec2RoleGeneral
+    Type: AWS::IAM::InstanceProfile
+  Ec2RoleGeneral:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+        Version: '2012-10-17'
+      Description: General EC2 instance profile/role
+      ManagedPolicyArns:
+      - Ref: Ec2PolicyGeneral
+      - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      MaxSessionDuration: 3600
+      Path: /
+      RoleName: Ec2RoleGeneral
+      Tags:
+      - Key: StackName
+        Value:
+          Ref: AWS::StackName
+    Type: AWS::IAM::Role
+  Ec2PolicyGeneral:
+    Properties:
+      Description: General EC2 instance policy
+      ManagedPolicyName: Ec2PolicyGeneral
+      Path: /
+      PolicyDocument:
+        Statement:
+        - Action:
+          - cloudwatch:PutMetricData
+          - cloudwatch:GetMetricData
+          - cloudwatch:ListMetrics
+          Effect: Allow
+          Resource: '*'
+          Sid: CloudWatchMetrics
+        - Action: logs:PutLogEvents
+          Effect: Allow
+          Resource: arn:aws:logs:us-east-1:${AWS::AccountId}:log-group:/ec2/:log-stream:*
+          Sid: CloudWatchLogsPutEvents
+        - Action:
+          - logs:CreateLogStream
+          - logs:DescribeLogGroups
+          - logs:DescribeLogStreams
+          Effect: Allow
+          Resource: arn:aws:logs:us-east-1:${AWS::AccountId}:log-group:/ec2/*
+          Sid: CloudWatchLogStreams
+        - Action:
+          - ssm:DescribeAssociation
+          - ssm:GetDeployablePatchSnapshotForInstance
+          - ssm:GetDocument
+          - ssm:DescribeDocument
+          - ssm:GetManifest
+          - ssm:GetParameter
+          - ssm:GetParameters
+          - ssm:ListAssociations
+          - ssm:ListInstanceAssociations
+          - ssm:PutInventory
+          - ssm:PutComplianceItems
+          - ssm:PutConfigurePackageResult
+          - ssm:UpdateAssociationStatus
+          - ssm:UpdateInstanceAssociationStatus
+          - ssm:UpdateInstanceInformation
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - ssmmessages:CreateControlChannel
+          - ssmmessages:CreateDataChannel
+          - ssmmessages:OpenControlChannel
+          - ssmmessages:OpenDataChannel
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - ec2messages:AcknowledgeMessage
+          - ec2messages:DeleteMessage
+          - ec2messages:FailMessage
+          - ec2messages:GetEndpoint
+          - ec2messages:GetMessages
+          - ec2messages:SendReply
+          Effect: Allow
+          Resource: '*'
+        Version: '2012-10-17'
+    Type: AWS::IAM::ManagedPolicy
+  SSMParameterRoleNamesList:
+    Properties:
+      Description: A list of the role names for
+      Name: /Infra/Iam/RoleNamesList
+      Tier: Standard
+      Type: StringList
+      Value: Ec2RoleGeneral
+    Type: AWS::SSM::Parameter
+  SSMParameterEc2RoleGeneral:
+    Properties:
+      Description: General EC2 instance profile/role
+      Name: /Infra/Iam/Ec2RoleGeneral
+      Tier: Standard
+      Type: String
+      Value:
+        Fn::GetAtt:
+        - Ec2RoleGeneral
+        - Arn
+    Type: AWS::SSM::Parameter

@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Stack to manage EC2 instances
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+      - W3010
+      regions:
+      - us-east-1
+      - us-east-2
+Parameters:
+  ProjectEnv:
+    Default: null
+    Type: String
+  ProjectName:
+    Default: null
+    Type: String
+Resources:
+  TestInstance101:
+    Properties:
+      AvailabilityZone: us-east-1a
+      BlockDeviceMappings:
+      - DeviceName: /dev/xvda
+        Ebs:
+          DeleteOnTermination: true
+          Encrypted: true
+          KmsKeyId: null
+          VolumeSize: 8
+          VolumeType: gp3
+      - DeviceName: /dev/xvdb
+        Ebs:
+          DeleteOnTermination: true
+          Encrypted: true
+          KmsKeyId: null
+          VolumeSize: 30
+          VolumeType: gp3
+      DisableApiTermination: true
+      IamInstanceProfile: Ec2RoleGeneral
+      ImageId: ami-047a51fa27710816e
+      InstanceType: t3.medium
+      KeyName: pennmutual-cloudops
+      NetworkInterfaces:
+      - DeviceIndex: '0'
+        NetworkInterfaceId:
+          Ref: Pjenkinsagent101Eth0
+      Tags: null
+    Type: AWS::EC2::Instance
+  TestInstance101Eth0:
+    Properties:
+      Description: TestInstance101 eth0
+      GroupSet:
+      - Fn::ImportValue: VpcUsEast1SecurityGroupICMP
+      - Fn::ImportValue: VpcUsEast1SecurityGroupSSH
+      SourceDestCheck: false
+      SubnetId:
+        Fn::ImportValue: VpcUsEast1SubnetPrvA
+      Tags:
+      - Key: Name
+        Value: TestInstance101Eth0
+    Type: AWS::EC2::NetworkInterface
